@@ -52,8 +52,6 @@ def build_payload(prompt, model, aspect_ratio, image_size, person_generation):
         "aspectRatio": aspect_ratio,
         "imageSize": image_size,
     }
-    if person_generation:
-        image_config["personGeneration"] = person_generation
 
     generation_config = {
         "responseModalities": ["IMAGE", "TEXT"],

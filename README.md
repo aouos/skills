@@ -6,26 +6,20 @@ Each skill lives in its own directory and is centered around a `SKILL.md` entry 
 
 ## Available Skills
 
-| Skill | What it does | Requirements |
-|---|---|---|
+| Skill                                         | What it does                                                                                                                                         | Requirements                         |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
 | [gemini-image-gen](gemini-image-gen/SKILL.md) | Generate images with the official Gemini API and save organized output folders with `prompt.md`, generated image files, and optional `request.json`. | `GEMINI_API_KEY` or `GOOGLE_API_KEY` |
 
 ## Install
 
 ```bash
-claude skill add --from https://github.com/aouos/skills/tree/main/<skill-name>
+npx skills add aouos/skills
 ```
 
-Example:
+Install a single skill with Claude Code:
 
 ```bash
 claude skill add --from https://github.com/aouos/skills/tree/main/gemini-image-gen
-```
-
-Also supported:
-
-```bash
-npx skills add --from https://github.com/aouos/skills/tree/main/gemini-image-gen
 ```
 
 For `gemini-image-gen`, set `GEMINI_API_KEY` or `GOOGLE_API_KEY` in your environment before use.
