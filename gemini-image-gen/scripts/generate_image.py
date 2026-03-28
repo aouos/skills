@@ -46,7 +46,7 @@ def sanitize_for_folder(text, max_len=50):
     return text or 'image'
 
 
-def build_payload(prompt, model, aspect_ratio, image_size, person_generation):
+def build_payload(prompt, model, aspect_ratio, image_size):
     """Build the API request payload, adapting config per model."""
     image_config = {
         "aspectRatio": aspect_ratio,
@@ -82,14 +82,14 @@ def build_payload(prompt, model, aspect_ratio, image_size, person_generation):
     return payload
 
 
-def call_gemini_api(prompt, api_key, model, aspect_ratio, image_size, person_generation):
+def call_gemini_api(prompt, api_key, model, aspect_ratio, image_size):
     """Call the Gemini generateContent endpoint and return the parsed JSON."""
     url = (
         f"https://generativelanguage.googleapis.com/v1beta/models/"
         f"{model}:generateContent?key={api_key}"
     )
 
-    payload = build_payload(prompt, model, aspect_ratio, image_size, person_generation)
+    payload = build_payload(prompt, model, aspect_ratio, image_size)
 
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
@@ -108,7 +108,7 @@ def call_gemini_api(prompt, api_key, model, aspect_ratio, image_size, person_gen
         sys.exit(1)
 
 
-def extract_and_save(result, output_dir, prompt, model, aspect_ratio, image_size, person_generation):
+def extract_and_save(result, output_dir, prompt, model, aspect_ratio, image_size):
     """Extract images and text from API response, write files to output_dir."""
     os.makedirs(output_dir, exist_ok=True)
 
@@ -142,7 +142,6 @@ def extract_and_save(result, output_dir, prompt, model, aspect_ratio, image_size
         f"- **Model**: `{model}`",
         f"- **Aspect Ratio**: {aspect_ratio}",
         f"- **Image Size**: {image_size}",
-        f"- **Person Generation**: {person_generation}",
         f"- **Generated At**: {now}",
         "",
         "## Prompt",
@@ -185,13 +184,8 @@ def main():
         help="Output directory (auto-generated if omitted)",
     )
     parser.add_argument(
-        "--person-generation", default="ALLOW_ADULT",
-        choices=["ALLOW_ALL", "ALLOW_ADULT", "ALLOW_NONE"],
-        help="Person generation policy (default: ALLOW_ADULT)",
-    )
-    parser.add_argument(
         "--save-request", action="store_true",
-        help="Save request.json (full API payload without key) to output folder",
+        help="Save response.json (Gemini API response) to output folder",
     )
     args = parser.parse_args()
 
@@ -248,12 +242,6 @@ def main():
         slug = sanitize_for_folder(args.prompt)
         output_dir = os.path.join(parent, f"{ts}-{slug}")
 
-    # Build request payload (for logging and the actual API call)
-    request_payload = build_payload(
-        args.prompt, args.model, args.aspect_ratio,
-        args.image_size, args.person_generation,
-    )
-
     print(f"Generating image with {args.model}...", file=sys.stderr)
     result = call_gemini_api(
         prompt=args.prompt,
@@ -261,12 +249,11 @@ def main():
         model=args.model,
         aspect_ratio=args.aspect_ratio,
         image_size=args.image_size,
-        person_generation=args.person_generation,
     )
 
     images, texts = extract_and_save(
         result, output_dir, args.prompt,
-        args.model, args.aspect_ratio, args.image_size, args.person_generation,
+        args.model, args.aspect_ratio, args.image_size,
     )
 
     # Determine actual success based on whether images were generated
@@ -287,14 +274,10 @@ def main():
     }
 
     if args.save_request:
-        request_json_path = os.path.join(output_dir, "request.json")
-        with open(request_json_path, "w", encoding="utf-8") as f:
-            json.dump({
-                "model": args.model,
-                "endpoint": f"https://generativelanguage.googleapis.com/v1beta/models/{args.model}:generateContent",
-                "payload": request_payload,
-            }, f, ensure_ascii=False, indent=2)
-        output["request_json"] = request_json_path
+        response_json_path = os.path.join(output_dir, "response.json")
+        with open(response_json_path, "w", encoding="utf-8") as f:
+            json.dump(result, f, ensure_ascii=False, indent=2)
+        output["response_json"] = response_json_path
     print(json.dumps(output, ensure_ascii=False, indent=2))
 
 

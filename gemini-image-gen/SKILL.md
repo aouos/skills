@@ -1,6 +1,6 @@
 ---
 name: gemini-image-gen
-description: "Generate images using the Gemini API (AI Studio key). Use when user asks to generate/create images with Gemini, Google AI, or mentions 'Gemini 图片', 'Gemini 生图', 'AI Studio 生图'."
+description: "Generate images using the Gemini API (AI Studio key). Use when user asks to generate/create images with Gemini, Google AI, or mentions '图片生成', 'Gemini 生图', 'AI 生图', 'generate image', 'create image'."
 ---
 
 # Gemini Image Generation
@@ -9,37 +9,40 @@ description: "Generate images using the Gemini API (AI Studio key). Use when use
 python <skill-path>/scripts/generate_image.py "your prompt here"
 ```
 
-Output: `gemini-images/{timestamp}-{slug}/` containing `prompt.md`, `image.png`, and optionally `request.json`.
+Output: `gemini-images/{timestamp}-{slug}/` containing `prompt.md`, `image.png`, and optionally `response.json`.
 
 ## Requirements
 
 `GEMINI_API_KEY` or `GOOGLE_API_KEY` env var ([get key](https://aistudio.google.com/apikey)).
 
 First-time permission setup:
+
 ```bash
 claude config add permissions.allow "Bash(python */gemini-image-gen/scripts/generate_image.py*)"
 ```
 
 ## Models
 
-| Model | Notes |
-|---|---|
+| Model                            | Notes                                                                 |
+| -------------------------------- | --------------------------------------------------------------------- |
 | `gemini-3.1-flash-image-preview` | **Default.** Fast, supports thinkingConfig + googleSearch/imageSearch |
-| `gemini-3-pro-image-preview` | Higher quality, better text rendering and complex layouts |
+| `gemini-3-pro-image-preview`     | Higher quality, better text rendering and complex layouts             |
 
 ## Parameters
 
 ### `--image-size`
+
 Must use **uppercase `K`**. Unsupported values are caught by the script and fall back (Pro 512→1K, others→2K).
 
-| Value | Flash | Pro |
-|---|---|---|
-| `512` | Yes | No |
-| `1K` | Yes | Yes |
-| `2K` | **default** | Yes |
-| `4K` | Yes | Yes |
+| Value | Flash       | Pro |
+| ----- | ----------- | --- |
+| `512` | Yes         | No  |
+| `1K`  | Yes         | Yes |
+| `2K`  | **default** | Yes |
+| `4K`  | Yes         | Yes |
 
 ### `--aspect-ratio`
+
 **Flash** (14): `1:1` · `1:4` · `1:8` · `2:3` · `3:2` · `3:4` · `4:1` · `4:3` · `4:5` · `5:4` · `8:1` · `9:16` · `16:9` · `21:9`
 
 **Pro** (10): `1:1` · `2:3` · `3:2` · `3:4` · `4:3` · `4:5` · `5:4` · `9:16` · `16:9` · `21:9`
@@ -47,29 +50,33 @@ Must use **uppercase `K`**. Unsupported values are caught by the script and fall
 Unsupported ratio auto-falls back to `16:9`.
 
 ### Other flags
-- `--person-generation`: `ALLOW_ADULT`(default) · `ALLOW_ALL` · `ALLOW_NONE`
-- `--save-request`: Save `request.json` (API payload without key) to output folder
+
+- `--save-request`: Save `response.json` (Gemini API response) to output folder
 - `--output-dir`: Override auto-generated output path
 
-## Workflow (Interactive)
+## Workflow
 
-Use `AskUserQuestion` for guidance. Skip steps when the user already provided enough info.
+**IMPORTANT:**
 
-### Step 1: Prompt
+- You MUST use `AskUserQuestion` tool (not plain text) to collect user input. Plain text does NOT pause execution.
+- Match the user's language for all UI text (questions, labels, descriptions).
 
-Clear description (e.g. "生成一张赛博朋克城市夜景") → Step 2.
+### Step 1: Collect Prompt
 
-Vague request → ask for details. Craft a detailed English prompt (Gemini works best with English). Show the crafted prompt for transparency.
+- User already provided a clear prompt → use it directly, craft an English version (Gemini works best with English), go to Step 2.
+- No prompt or too vague → call `AskUserQuestion`:
+  - question: "Describe the image you want to generate:"
+  - header: "Prompt"
+  - options: provide 2-3 example prompts as inspiration (e.g. "Cyberpunk city at night", "Watercolor cat portrait")
 
-### Step 2: Confirm Parameters
+### Step 2: Settings
 
-> **Generation settings:**
-> - Model: Flash / Pro
-> - Size: 2K
-> - Ratio: 16:9
-> - Prompt: "..."
->
-> Enter to generate, or tell me what to change
+Call `AskUserQuestion` with 4 questions in a single call. The first option in each is the default (Recommended). Users can accept defaults or switch as needed:
+
+1. **Model** — header: "Model", options: "Flash (Recommended)" / "Pro"
+2. **Size** — header: "Size", options: "2K (Recommended)" / "1K" / "4K"
+3. **Ratio** — header: "Ratio", options: "16:9 (Recommended)" / "1:1" / "9:16" / "21:9"
+4. **Save JSON** — header: "Debug", options: "No (Recommended)" / "Save response.json"
 
 ### Step 3: Generate
 
@@ -79,10 +86,9 @@ python <skill-path>/scripts/generate_image.py "prompt" [--model ...] [--aspect-r
 
 ### Step 4: Results
 
-1. Show the generated image (Read tool on image file)
-2. Check `success` field — if `false`, the image was likely blocked by safety filters; inform the user
+1. Read and show the generated image
+2. If `success: false` → inform user (likely safety filter)
 3. Report output folder path
-4. Ask if the user wants to regenerate or adjust
 
 ## Prompt Tips
 
@@ -94,9 +100,9 @@ python <skill-path>/scripts/generate_image.py "prompt" [--model ...] [--aspect-r
 
 ## Error Handling
 
-| Error | Cause | Fix |
-|---|---|---|
-| `400` | Invalid parameter | Check supported values for the chosen model |
-| `401/403` | Bad API key | Check env var |
-| `429` | Rate limit | Wait and retry |
-| `success: false` | No image generated (safety filter or text-only response) | Adjust prompt |
+| Error            | Cause                                                    | Fix                                         |
+| ---------------- | -------------------------------------------------------- | ------------------------------------------- |
+| `400`            | Invalid parameter                                        | Check supported values for the chosen model |
+| `401/403`        | Bad API key                                              | Check env var                               |
+| `429`            | Rate limit                                               | Wait and retry                              |
+| `success: false` | No image generated (safety filter or text-only response) | Adjust prompt                               |
